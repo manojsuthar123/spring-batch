@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
+
 @Component
 public class JobCompletionNotificationListener extends JobExecutionListenerSupport {
     private static final Logger log = LoggerFactory.getLogger(JobCompletionNotificationListener.class);
@@ -21,15 +23,16 @@ public class JobCompletionNotificationListener extends JobExecutionListenerSuppo
     }
 
     @Override
+    public void beforeJob(JobExecution jobExecution) {
+        if(jobExecution.getStatus() == BatchStatus.STARTED) {
+            log.info("JOB STARTED! at "+new Date());
+        }
+    }
+
+    @Override
     public void afterJob(JobExecution jobExecution) {
         if(jobExecution.getStatus() == BatchStatus.COMPLETED) {
-            log.info("!!! JOB FINISHED! Time to verify the results");
-
-            jdbcTemplate.query("SELECT first_name, last_name FROM people",
-                    (rs, row) -> new Person(
-                            rs.getString(1),
-                            rs.getString(2))
-            ).forEach(person -> log.info("Found <" + person + "> in the database."));
+            log.info("JOB FINISHED! at "+new Date());
         }
     }
 }
