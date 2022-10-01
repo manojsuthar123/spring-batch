@@ -45,6 +45,7 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
 
     private Resource outputResource = new FileSystemResource("output/outputData.csv");
 
+    //Cursor based item reader
     @Bean
     public JdbcCursorItemReader<Person> itemReader() {
         return new JdbcCursorItemReaderBuilder<Person>()
