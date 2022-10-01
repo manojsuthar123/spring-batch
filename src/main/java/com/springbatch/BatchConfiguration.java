@@ -10,7 +10,10 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
+import org.springframework.batch.item.database.JpaPagingItemReader;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
+import org.springframework.batch.item.database.builder.JpaPagingItemReaderBuilder;
+import org.springframework.batch.item.database.support.SqlPagingQueryProviderFactoryBean;
 import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
 import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
@@ -45,14 +48,14 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
 
     private Resource outputResource = new FileSystemResource("output/outputData.csv");
 
-    //Cursor based item reader
+
     @Bean
-    public JdbcCursorItemReader<Person> itemReader() {
-        return new JdbcCursorItemReaderBuilder<Person>()
-                .dataSource(this.dataSource)
+    public JpaPagingItemReader<Person> itemReader() {
+        return new JpaPagingItemReaderBuilder<Person>()
                 .name("personReader")
-                .sql("SELECT id, first_name, last_name, city FROM person")
-                .rowMapper(new PersonRowMapper())
+                .entityManagerFactory(queryProvider())
+                .queryString("select p from person p")
+                .pageSize(500)
                 .build();
     }
 
