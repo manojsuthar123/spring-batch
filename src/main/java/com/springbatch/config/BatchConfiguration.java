@@ -1,5 +1,7 @@
-package com.springbatch;
+package com.springbatch.config;
 
+import com.springbatch.custom.PersonItemProcessor;
+import com.springbatch.listener.JobCompletionNotificationListener;
 import com.springbatch.mapper.PersonRowMapper;
 import com.springbatch.model.Person;
 import org.springframework.batch.core.Job;
@@ -21,8 +23,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
 
 import javax.sql.DataSource;
 
@@ -91,21 +91,19 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
                 .build();
     }
 
-    @Bean
-    public TaskExecutor taskExecutor() {
-        SimpleAsyncTaskExecutor asyncTaskExecutor = new SimpleAsyncTaskExecutor();
-        asyncTaskExecutor.setConcurrencyLimit(10);
-        return asyncTaskExecutor;
-    }
 
     @Bean
     public Step step1() {
         return stepBuilderFactory.get("step1")
-                .<Person, Person>chunk(10)
+                .<Person, Person>chunk(100)
                 .reader(itemReader())
                 .processor(processor())
                 .writer(writer())
-                .taskExecutor(taskExecutor())
+                //.faultTolerant()
+                //.skipLimit(10)
+                //.skip(Exception.class)
+                //.noSkip(FileNotFoundException.class)
+                //.noRollback(ValidationException.class)
                 .build();
     }
 

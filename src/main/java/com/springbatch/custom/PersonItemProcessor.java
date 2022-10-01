@@ -1,4 +1,4 @@
-package com.springbatch;
+package com.springbatch.custom;
 
 import com.springbatch.model.Person;
 import org.slf4j.Logger;

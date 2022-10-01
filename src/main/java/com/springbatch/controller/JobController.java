@@ -1,4 +1,4 @@
-package com.springbatch;
+package com.springbatch.controller;
 
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
