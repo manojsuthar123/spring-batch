@@ -10,10 +10,7 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
-import org.springframework.batch.item.database.JpaPagingItemReader;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
-import org.springframework.batch.item.database.builder.JpaPagingItemReaderBuilder;
-import org.springframework.batch.item.database.support.SqlPagingQueryProviderFactoryBean;
 import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
 import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
@@ -24,6 +21,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 
 import javax.sql.DataSource;
 
@@ -48,14 +47,14 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
 
     private Resource outputResource = new FileSystemResource("output/outputData.csv");
 
-
+    //Cursor based item reader
     @Bean
-    public JpaPagingItemReader<Person> itemReader() {
-        return new JpaPagingItemReaderBuilder<Person>()
+    public JdbcCursorItemReader<Person> itemReader() {
+        return new JdbcCursorItemReaderBuilder<Person>()
+                .dataSource(this.dataSource)
                 .name("personReader")
-                .entityManagerFactory(queryProvider())
-                .queryString("select p from person p")
-                .pageSize(500)
+                .sql("SELECT id, first_name, last_name, city FROM person")
+                .rowMapper(new PersonRowMapper())
                 .build();
     }
 
@@ -93,12 +92,20 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
     }
 
     @Bean
+    public TaskExecutor taskExecutor() {
+        SimpleAsyncTaskExecutor asyncTaskExecutor = new SimpleAsyncTaskExecutor();
+        asyncTaskExecutor.setConcurrencyLimit(10);
+        return asyncTaskExecutor;
+    }
+
+    @Bean
     public Step step1() {
         return stepBuilderFactory.get("step1")
-                .<Person, Person>chunk(100)
+                .<Person, Person>chunk(10)
                 .reader(itemReader())
                 .processor(processor())
                 .writer(writer())
+                .taskExecutor(taskExecutor())
                 .build();
     }
 
