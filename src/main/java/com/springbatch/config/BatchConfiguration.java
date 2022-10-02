@@ -1,16 +1,12 @@
 package com.springbatch.config;
 
 import com.springbatch.custom.PersonItemProcessor;
-import com.springbatch.listener.JobCompletionNotificationListener;
 import com.springbatch.mapper.PersonRowMapper;
 import com.springbatch.model.Person;
 import io.micrometer.core.annotation.Timed;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.DefaultBatchConfigurer;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.*;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
@@ -41,16 +37,20 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
     @Autowired
     DataSource dataSource;
 
+    /*@Autowired
+    JobCompletionNotificationListener listener;*/
+
     @Override
     public void setDataSource(DataSource dataSource) {
         super.setDataSource(null);
     }
 
-    private Resource outputResource = new FileSystemResource("output/outputData.csv");
+    private Resource outputResource = new FileSystemResource("src/main/resources/output/outputData.csv");
 
     @Timed(value = "itemReader.time")
     //Cursor based item reader
     @Bean
+    @StepScope
     public JdbcCursorItemReader<Person> itemReader() {
         return new JdbcCursorItemReaderBuilder<Person>()
                 .dataSource(this.dataSource)
@@ -66,6 +66,7 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
     }
 
     @Bean
+    @StepScope
     public FlatFileItemWriter<Person> writer() {
         FlatFileItemWriter<Person> writer = new FlatFileItemWriter<>();
         writer.setResource(outputResource);
@@ -84,11 +85,11 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
     }
 
     @Bean
-    public Job importUserJob(JobCompletionNotificationListener listener, Step step1) {
+    public Job importUserJob() {
         return jobBuilderFactory.get("importUserJob")
                 .incrementer(new RunIdIncrementer())
-                .listener(listener)
-                .flow(step1)
+                //.listener(listener)
+                .flow(step1())
                 .end()
                 .build();
     }
