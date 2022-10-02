@@ -1,5 +1,6 @@
 package com.springbatch.controller;
 
+import io.micrometer.core.annotation.Timed;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
@@ -25,6 +26,7 @@ public class JobController {
     @Autowired
     private Job job;
 
+    @Timed(value = "batchjob.time", description = "Time taken to return JobController#startJob")
     @GetMapping("/start-job")
     public ResponseEntity<Map<String, String>> startJob() {
 

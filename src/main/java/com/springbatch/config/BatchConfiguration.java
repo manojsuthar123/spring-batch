@@ -4,6 +4,7 @@ import com.springbatch.custom.PersonItemProcessor;
 import com.springbatch.listener.JobCompletionNotificationListener;
 import com.springbatch.mapper.PersonRowMapper;
 import com.springbatch.model.Person;
+import io.micrometer.core.annotation.Timed;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.DefaultBatchConfigurer;
@@ -47,6 +48,7 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
 
     private Resource outputResource = new FileSystemResource("output/outputData.csv");
 
+    @Timed(value = "itemReader.time")
     //Cursor based item reader
     @Bean
     public JdbcCursorItemReader<Person> itemReader() {
