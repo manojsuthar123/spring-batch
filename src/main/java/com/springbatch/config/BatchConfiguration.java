@@ -3,6 +3,7 @@ package com.springbatch.config;
 import com.springbatch.custom.PersonItemProcessor;
 import com.springbatch.mapper.PersonRowMapper;
 import com.springbatch.model.Person;
+import com.springbatch.utils.ItemCountListener;
 import io.micrometer.core.annotation.Timed;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -102,12 +103,19 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
                 .reader(itemReader())
                 .processor(processor())
                 .writer(writer())
+                .listener(listener())
+                //.stream(stream())
                 //.faultTolerant()
                 //.skipLimit(10)
                 //.skip(Exception.class)
                 //.noSkip(FileNotFoundException.class)
                 //.noRollback(ValidationException.class)
                 .build();
+    }
+
+    @Bean
+    public ItemCountListener listener() {
+        return new ItemCountListener();
     }
 
 }
