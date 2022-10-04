@@ -1,6 +1,6 @@
 package com.springbatch.custom;
 
-import com.springbatch.model.Person;
+import com.springbatch.entity.Person;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.ItemProcessor;
