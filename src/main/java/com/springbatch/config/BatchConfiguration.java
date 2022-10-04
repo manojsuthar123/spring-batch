@@ -87,18 +87,18 @@ public class BatchConfiguration {
     @Bean
     public Step step1() {
         return stepBuilderFactory.get("step1")
-                .<Person, Person>chunk(500)
+                .<Person, Person>chunk(1000)
                 .reader(itemReader())
                 .processor(processor())
                 .writer(writer())
-                //.taskExecutor(taskExecutor())
+                .taskExecutor(taskExecutor())
                 .build();
     }
 
     @Bean
     public TaskExecutor taskExecutor() {
         SimpleAsyncTaskExecutor asyncTaskExecutor = new SimpleAsyncTaskExecutor();
-        asyncTaskExecutor.setConcurrencyLimit(10);
+        asyncTaskExecutor.setConcurrencyLimit(20);
         return asyncTaskExecutor;
     }
 
