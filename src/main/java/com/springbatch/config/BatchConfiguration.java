@@ -3,6 +3,7 @@ package com.springbatch.config;
 import com.springbatch.custom.PersonItemProcessor;
 import com.springbatch.mapper.PersonRowMapper;
 import com.springbatch.model.Person;
+import com.springbatch.utils.ItemCountListener;
 import io.micrometer.core.annotation.Timed;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -20,6 +21,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 
 import javax.sql.DataSource;
 
@@ -57,6 +60,7 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
                 .name("personReader")
                 .sql("SELECT id, first_name, last_name, city FROM person")
                 .rowMapper(new PersonRowMapper())
+                .verifyCursorPosition(false)
                 .build();
     }
 
@@ -98,16 +102,30 @@ public class BatchConfiguration extends DefaultBatchConfigurer {
     @Bean
     public Step step1() {
         return stepBuilderFactory.get("step1")
-                .<Person, Person>chunk(100)
+                .<Person, Person>chunk(500)
                 .reader(itemReader())
                 .processor(processor())
                 .writer(writer())
+                .taskExecutor(taskExecutor())
+                //.stream(stream())
                 //.faultTolerant()
                 //.skipLimit(10)
                 //.skip(Exception.class)
                 //.noSkip(FileNotFoundException.class)
                 //.noRollback(ValidationException.class)
                 .build();
+    }
+
+    @Bean
+    public ItemCountListener listener() {
+        return new ItemCountListener();
+    }
+
+    @Bean
+    public TaskExecutor taskExecutor() {
+        SimpleAsyncTaskExecutor asyncTaskExecutor = new SimpleAsyncTaskExecutor();
+        asyncTaskExecutor.setConcurrencyLimit(10);
+        return asyncTaskExecutor;
     }
 
 }
