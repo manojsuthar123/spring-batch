@@ -2,6 +2,7 @@ package com.springbatch.config;
 
 import com.springbatch.custom.PersonItemProcessor;
 import com.springbatch.entity.Person;
+import com.springbatch.partition.ColumnRangePartitioner;
 import com.springbatch.repository.PersonRepository;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -10,6 +11,8 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.partition.PartitionHandler;
+import org.springframework.batch.core.partition.support.TaskExecutorPartitionHandler;
 import org.springframework.batch.item.data.RepositoryItemReader;
 import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
@@ -19,9 +22,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -74,7 +77,7 @@ public class BatchConfiguration {
         return writer;
     }
 
-    @Bean
+    /*@Bean
     public Job personJob() {
         return jobBuilderFactory.get("personJob")
                 .incrementer(new RunIdIncrementer())
@@ -91,15 +94,59 @@ public class BatchConfiguration {
                 .reader(itemReader())
                 .processor(processor())
                 .writer(writer())
-                .taskExecutor(taskExecutor())
                 .build();
+    }*/
+
+
+    //partitioning
+    @Bean
+    public ColumnRangePartitioner partitioner() {
+        return new ColumnRangePartitioner();
+    }
+
+    @Bean
+    public PartitionHandler partitionHandler() {
+        TaskExecutorPartitionHandler taskExecutorPartitionHandler = new TaskExecutorPartitionHandler();
+        taskExecutorPartitionHandler.setGridSize(4);
+        taskExecutorPartitionHandler.setTaskExecutor(taskExecutor());
+        taskExecutorPartitionHandler.setStep(slaveStep());
+        return taskExecutorPartitionHandler;
     }
 
     @Bean
     public TaskExecutor taskExecutor() {
-        SimpleAsyncTaskExecutor asyncTaskExecutor = new SimpleAsyncTaskExecutor();
-        asyncTaskExecutor.setConcurrencyLimit(20);
-        return asyncTaskExecutor;
+        ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
+        taskExecutor.setMaxPoolSize(4);
+        taskExecutor.setCorePoolSize(4);
+        taskExecutor.setQueueCapacity(4);
+        return taskExecutor;
+    }
+
+    @Bean
+    public Step masterStep() {
+        return stepBuilderFactory.get("masterStep")
+                .partitioner(slaveStep().getName(), partitioner())
+                .partitionHandler(partitionHandler())
+                .build();
+    }
+
+    @Bean
+    public Step slaveStep() {
+        return stepBuilderFactory.get("slaveStep")
+                .<Person, Person>chunk(1000)
+                .reader(itemReader())
+                .processor(processor())
+                .writer(writer())
+                .build();
+    }
+
+    @Bean
+    public Job personJob() {
+        return jobBuilderFactory.get("personJob")
+                .incrementer(new RunIdIncrementer())
+                .flow(masterStep())
+                .end()
+                .build();
     }
 
 }
