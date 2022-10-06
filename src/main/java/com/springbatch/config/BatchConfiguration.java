@@ -2,6 +2,7 @@ package com.springbatch.config;
 
 import com.springbatch.custom.PersonItemProcessor;
 import com.springbatch.entity.Person;
+import com.springbatch.listener.JobCompletionNotificationListener;
 import com.springbatch.repository.PersonRepository;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -22,9 +23,11 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ThreadPoolExecutor;
 
 @Configuration
 @EnableBatchProcessing
@@ -78,6 +81,7 @@ public class BatchConfiguration {
     public Job personJob() {
         return jobBuilderFactory.get("personJob")
                 .incrementer(new RunIdIncrementer())
+                .listener(new JobCompletionNotificationListener())
                 .flow(step1())
                 .end()
                 .build();
@@ -97,9 +101,16 @@ public class BatchConfiguration {
 
     @Bean
     public TaskExecutor taskExecutor() {
-        SimpleAsyncTaskExecutor asyncTaskExecutor = new SimpleAsyncTaskExecutor();
-        asyncTaskExecutor.setConcurrencyLimit(20);
-        return asyncTaskExecutor;
+        /*SimpleAsyncTaskExecutor asyncTaskExecutor = new SimpleAsyncTaskExecutor();
+        asyncTaskExecutor.setConcurrencyLimit(10);
+        return asyncTaskExecutor;*/
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(16);
+        executor.setMaxPoolSize(16);
+        executor.setQueueCapacity(16);
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setThreadNamePrefix("MultiThreaded-");
+        return executor;
     }
 
 }

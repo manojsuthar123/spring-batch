@@ -28,39 +28,55 @@ public class JobController {
 
     @Timed(value = "batchjob.time", description = "Time taken to return JobController#startJob")
     @GetMapping("/start-job")
-    public ResponseEntity<Map<String, String>> startJob() {
+    public ResponseEntity<Map<String, Object>> startJob() {
 
         //TODO add scheduler based job execution
 
-        Map<String, String> responseMap = new HashMap<>();
+        Map<String, Object> responseMap = new HashMap<>();
 
         try {
 
             //set job parameters
             JobParameters jobParameters = new JobParametersBuilder()
                     .addLong("startAt", System.currentTimeMillis()).toJobParameters();
-            JobExecution execution = jobLauncher.run(job, jobParameters);
+            JobExecution jobExecution = jobLauncher.run(job, jobParameters);
 
 
-            if (execution.getStatus() == BatchStatus.COMPLETED) {
-                responseMap.put("status", "success");
-                responseMap.put("message", "Job Completed");
-                return new ResponseEntity<Map<String, String>>(responseMap, HttpStatus.OK);
+            if (jobExecution.getStatus() == BatchStatus.COMPLETED) {
+                responseMap.put("Job_id", jobExecution.getJobId());
+                responseMap.put("Job_name", jobExecution.getJobInstance().getJobName());
+                responseMap.put("Job_parameters", jobExecution.getJobParameters());
+                responseMap.put("Job_status", jobExecution.getStatus().name());
+                responseMap.put("Job_running", jobExecution.isRunning());
+                responseMap.put("Job_create_time", jobExecution.getCreateTime());
+                responseMap.put("Job_started_at", jobExecution.getStartTime());
+                responseMap.put("Job_completed_at", jobExecution.getEndTime());
+                responseMap.put("Job_exit", jobExecution.getExitStatus().getExitDescription());
+                jobExecution.getStepExecutions().forEach(stepExecution -> {
+                    responseMap.put("Step_id", stepExecution.getId());
+                    responseMap.put("Step_name", stepExecution.getStepName());
+                    responseMap.put("Step_start_at", stepExecution.getStartTime());
+                    responseMap.put("Step_read_count", stepExecution.getReadCount());
+                    responseMap.put("Step_write_count", stepExecution.getWriteCount());
+                    responseMap.put("Step_skip_count", stepExecution.getSkipCount());
+                });
+                return new ResponseEntity<Map<String, Object>>(responseMap, HttpStatus.OK);
             } else {
-                List<Throwable> allFailureExceptions = execution.getAllFailureExceptions();
+                List<Throwable> allFailureExceptions = jobExecution.getAllFailureExceptions();
                 allFailureExceptions.forEach(throwable -> {
-                    System.out.println("error123: "+throwable.getLocalizedMessage());
+                    System.out.println("Job errors: " + throwable.getLocalizedMessage());
                 });
 
                 responseMap.put("status", "failed");
                 responseMap.put("message", "Job Failed");
-                return new ResponseEntity<Map<String, String>>(responseMap, HttpStatus.EXPECTATION_FAILED);
+                return new ResponseEntity<Map<String, Object>>(responseMap, HttpStatus.EXPECTATION_FAILED);
             }
 
-        } catch (JobExecutionAlreadyRunningException | JobRestartException | JobInstanceAlreadyCompleteException | JobParametersInvalidException e) {
+        } catch (JobExecutionAlreadyRunningException | JobRestartException | JobInstanceAlreadyCompleteException |
+                 JobParametersInvalidException e) {
             responseMap.put("status", "failed");
             responseMap.put("message", "Job Failed");
-            return new ResponseEntity<Map<String, String>>(responseMap, HttpStatus.EXPECTATION_FAILED);
+            return new ResponseEntity<Map<String, Object>>(responseMap, HttpStatus.EXPECTATION_FAILED);
         }
 
     }
